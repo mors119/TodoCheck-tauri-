@@ -1,73 +1,294 @@
-# React + TypeScript + Vite
+# Time-Based Habit Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A minimal habit tracking application focused on **time-based progress**, not just task completion.
 
-Currently, two official plugins are available:
+Instead of simply checking tasks as done, this project allows you to:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- schedule tasks on specific days of the week
+- track how much time you spend on each task
+- see daily progress against planned durations
+- mark tasks as completed independently from time tracking
 
-## React Compiler
+The goal is to create a **structured daily routine system** where both **completion** and **time investment** can be measured.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+# Core Concept
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Most habit trackers only track **whether a task was completed**.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+This project tracks two different signals:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1️⃣ Completion
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Did you finish the task today?
+
+Example:
+
+```
+Read book
+☑ Done
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This is stored in the **Completion log**.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+Completion
+{
+  taskId
+  date
+}
+```
+
+---
+
+### 2️⃣ Time investment
+
+How much time did you spend on the task?
+
+Example:
+
+```
+Workout
+45m / 60m
+```
+
+This is stored in **TimeEntry** records.
+
+```
+TimeEntry
+{
+  taskId
+  date
+  startedAt
+  endedAt
+  minutes
+}
+```
+
+---
+
+# Features
+
+## Daily task scheduling
+
+Each task can be scheduled on specific days of the week.
+
+Example:
+
+```
+Monday, Wednesday, Friday
+```
+
+Only tasks scheduled for today appear in the **Today view**.
+
+---
+
+## Timer-based tracking
+
+Tasks can be tracked with a built-in timer.
+
+```
+Start → Stop
+```
+
+The system records time entries automatically.
+
+---
+
+## Daily progress tracking
+
+The application calculates:
+
+```
+spent time / planned time
+```
+
+Example:
+
+```
+2h 10m / 3h
+```
+
+A progress bar visualizes the overall progress of the day.
+
+---
+
+## Completion tracking
+
+Tasks can be marked as **Done** independently from time tracking.
+
+This allows workflows like:
+
+```
+Read book → Done
+Workout → timer tracking
+```
+
+---
+
+## Archive system
+
+Tasks can be archived without deleting historical data.
+
+Archived tasks:
+
+- are hidden from the main task list
+- can be restored later
+- preserve completion and time logs
+
+---
+
+# Today Dashboard
+
+The Today page provides a quick overview of the day:
+
+- Scheduled tasks
+- Completed tasks
+- Completion rate
+- Time progress
+- Today's task list
+
+This makes it easy to understand **how productive the day has been**.
+
+---
+
+# Data Model
+
+The application uses a simple domain model.
+
+### Task
+
+```
+Task
+{
+  id
+  title
+  category
+  durationMinutes
+  daysOfWeek
+  isActive
+}
+```
+
+---
+
+### Completion
+
+```
+Completion
+{
+  taskId
+  date
+}
+```
+
+---
+
+### TimeEntry
+
+```
+TimeEntry
+{
+  taskId
+  date
+  startedAt
+  endedAt
+  minutes
+}
+```
+
+---
+
+# UI Structure
+
+```
+Today Page
+ ├─ Today summary
+ │   ├─ Scheduled tasks
+ │   ├─ Completed tasks
+ │   └─ Completion progress
+ │
+ ├─ Time progress
+ │   └─ daily planned vs spent time
+ │
+ └─ Task list
+     ├─ Start / Stop timer
+     ├─ Mark Done
+     └─ Archive
+```
+
+---
+
+# Design Philosophy
+
+This project focuses on **clarity and simplicity**.
+
+Principles:
+
+- explicit domain models
+- simple state structures
+- predictable UI behavior
+- minimal dependencies
+
+The codebase is structured to keep **domain logic separated from UI components**.
+
+```
+domain/
+ ├─ types
+ ├─ completion
+ ├─ schedule
+ ├─ stats
+ └─ date
+```
+
+---
+
+# Tech Stack
+
+Frontend:
+
+- React
+- TypeScript
+- TailwindCSS
+
+UI:
+
+- Lucide icons
+
+Architecture:
+
+- Domain-driven structure
+- Pure domain functions
+- UI separated from logic
+
+---
+
+# Future Ideas
+
+Possible improvements:
+
+- weekly / monthly analytics
+- streak tracking
+- goal based progress
+- habit consistency visualization
+- cloud sync
+- mobile layout improvements
+
+---
+
+# Why This Project Exists
+
+Most productivity tools only track **task completion**.
+
+But productivity is often better measured by **time invested**.
+
+This project explores a hybrid model:
+
+```
+completion tracking
++
+time tracking
+```
+
+This allows users to better understand how their time is actually spent.
