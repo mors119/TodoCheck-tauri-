@@ -1,8 +1,8 @@
-import { useContext } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import type { Completion, Task } from '../../domain/types';
 import { buildWeekSchedule, WEEK_ORDER } from '../../domain/scheduleView';
-import { toYmd } from '../../domain/date';
+import { buildWeekDates, startOfWeekMonday, toYmd } from '../../domain/date';
 import { LocaleContext } from '../../i18n/context';
 
 // (role: display helper, type: (number)=>string)
@@ -27,34 +27,91 @@ function toHourBlocks(minutes: number): number {
   return Math.max(1, Math.ceil((minutes || 0) / 60));
 }
 
-// (role: add day offset helper, type: (Date, number)=>Date)
-function addDays(base: Date, days: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d;
+function normalizeWeekStart(ymd: string): string {
+  return toYmd(startOfWeekMonday(new Date(`${ymd}T00:00:00`)));
+}
+
+function shiftWeekStart(weekStartYmd: string, deltaDays: number): string {
+  const d = new Date(`${weekStartYmd}T00:00:00`);
+  d.setDate(d.getDate() + deltaDays);
+  return normalizeWeekStart(toYmd(d));
 }
 
 export function SchedulePage(props: {
   tasks: Task[]; // (role: all tasks, type: Task[])
   completions: Completion[]; // (role: completion logs, type: Completion[])
-  weekStartYmd: string; // (role: week start monday, type: string (YYYY-MM-DD))
+  weekStartYmd: string; // (role: current-week monday, type: string (YYYY-MM-DD))
+  getMemoText?: (taskId: string, date: string) => string;
+  onOpenTask?: (taskId: string) => void;
 }) {
   const { t } = useContext(LocaleContext);
-  const { tasks, completions, weekStartYmd } = props;
+  const { tasks, completions, weekStartYmd, getMemoText, onOpenTask } = props;
 
-  const week = buildWeekSchedule(tasks, { includeArchived: false });
+  const currentWeekStartYmd = useMemo(
+    () => normalizeWeekStart(weekStartYmd),
+    [weekStartYmd],
+  );
+  const [displayWeekStartYmd, setDisplayWeekStartYmd] =
+    useState(currentWeekStartYmd);
 
-  //  Use props weekStartYmd
-  // (role: monday date for this schedule view, type: Date)
-  const weekStart = new Date(`${weekStartYmd}T00:00:00`);
+  const normalizedWeekStartYmd = useMemo(
+    () => normalizeWeekStart(displayWeekStartYmd),
+    [displayWeekStartYmd],
+  );
+  const canGoNext = normalizedWeekStartYmd < currentWeekStartYmd;
+
+  const week = buildWeekSchedule(tasks, completions, normalizedWeekStartYmd, {
+    includeArchived: false,
+    getMemoText,
+  });
+
+  const weekDates = useMemo(
+    () => buildWeekDates(normalizedWeekStartYmd),
+    [normalizedWeekStartYmd],
+  );
+  const weekEndYmd = weekDates[6] ?? normalizedWeekStartYmd;
 
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-      <div className="mb-3">
-        <h2 className="text-base font-semibold text-zinc-100">
-          {t('common.schedule')}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+      <div className="mb-3 space-y-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-base font-semibold text-zinc-100">
+            {t('common.schedule')}
+          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setDisplayWeekStartYmd((prev) => shiftWeekStart(prev, -7))
+              }
+              className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-900/70">
+              {t('schedule.prevWeek')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisplayWeekStartYmd(currentWeekStartYmd)}
+              className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-900/70">
+              {t('schedule.thisWeek')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!canGoNext) return;
+                setDisplayWeekStartYmd((prev) => shiftWeekStart(prev, 7));
+              }}
+              disabled={!canGoNext}
+              className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-900/70 disabled:cursor-not-allowed disabled:opacity-50">
+              {t('schedule.nextWeek')}
+            </button>
+          </div>
+        </div>
+        <div className="text-xs whitespace-nowrap text-zinc-500">
+          {t('schedule.weekRange', {
+            start: normalizedWeekStartYmd,
+            end: weekEndYmd,
+          })}
+        </div>
+        <p className="mt-1 whitespace-pre-line text-sm text-zinc-400">
           {t('note.scheduleDescription')}
         </p>
       </div>
@@ -62,9 +119,7 @@ export function SchedulePage(props: {
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
         {WEEK_ORDER.map((dow, dowIndex) => {
           const items = week[dow];
-
-          // (role: column date ymd, type: string (YYYY-MM-DD))
-          const columnDateYmd = toYmd(addDays(weekStart, dowIndex));
+          const columnDateYmd = weekDates[dowIndex] ?? normalizedWeekStartYmd;
 
           const totalMinutes = items.reduce(
             (acc, it) => acc + (it.durationMinutes || 0),
@@ -83,8 +138,13 @@ export function SchedulePage(props: {
               key={dow}
               className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-3">
               <div className="flex items-baseline justify-between gap-2">
-                <div className="text-sm font-semibold text-zinc-100">
-                  {t(`time.day.${dow}`)}
+                <div>
+                  <div className="text-sm font-semibold text-zinc-100">
+                    {t(`time.day.${dow}`)}
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    {columnDateYmd.slice(5)}
+                  </div>
                 </div>
 
                 <div className="shrink-0 flex gap-1 text-right text-xs text-zinc-500">
@@ -116,17 +176,19 @@ export function SchedulePage(props: {
                     } as React.CSSProperties;
 
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={`${dow}_${it.taskId}`}
+                        onClick={() => onOpenTask?.(it.taskId)}
                         className={clsx(
-                          'h-auto rounded-xl border px-3 py-2 transition',
+                          'h-auto w-full rounded-xl border px-3 py-2 text-left transition',
                           'lg:[height:var(--h)]',
                           doneThatDay
                             ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15'
-                            : 'border-zinc-800 bg-zinc-900/30',
+                            : 'border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900/50',
                         )}
                         style={blockStyle}>
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-h-5 items-start justify-between gap-2">
                           <div className="min-w-0">
                             <div
                               className={clsx(
@@ -137,6 +199,28 @@ export function SchedulePage(props: {
                               )}>
                               {it.title}
                             </div>
+                            {it.description ? (
+                              <div
+                                className={clsx(
+                                  'mt-1 truncate text-xs',
+                                  doneThatDay
+                                    ? 'text-emerald-200/70'
+                                    : 'text-zinc-400',
+                                )}>
+                                {it.description}
+                              </div>
+                            ) : null}
+                            {it.memoText ? (
+                              <div
+                                className={clsx(
+                                  'mt-1 truncate text-xs',
+                                  doneThatDay
+                                    ? 'text-emerald-200/70'
+                                    : 'text-zinc-500',
+                                )}>
+                                {t('task.memo')}: {it.memoText}
+                              </div>
+                            ) : null}
                           </div>
 
                           <div
@@ -161,7 +245,7 @@ export function SchedulePage(props: {
                             {/* room for future */}
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

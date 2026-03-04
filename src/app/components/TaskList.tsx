@@ -18,11 +18,21 @@ interface TaskListProps {
   nowIso: string; // (role: ui clock iso, type: string)
   runningTaskIdToday: string | null; // (role: single running task id, type: string | null)
 
+  getMemoText?: (taskId: string, date: string) => string;
+
   variant: 'today' | 'manage';
   onToggleToday: (task: Task) => void;
   onArchive: (taskId: string) => void;
   onRestore?: (taskId: string) => void;
   onDelete?: (taskId: string) => void;
+  onSaveMemo?: (input: { taskId: string; date: string; text: string }) => void;
+  onUpdateTaskMeta?: (input: {
+    taskId: string;
+    title: string;
+    description: string;
+    startYmd: string | null;
+    autoArchiveAfter: number | null;
+  }) => void;
 
   onStartTimer: (task: Task) => void;
   onStopTimer: (task: Task) => void;
@@ -48,6 +58,7 @@ export function TaskList(props: TaskListProps) {
         <TaskListItem
           key={t.id}
           task={t}
+          memoText={props.getMemoText?.(t.id, props.todayYmd) ?? ''}
           completions={props.completions}
           timeEntries={props.timeEntries}
           todayYmd={props.todayYmd}
@@ -59,6 +70,8 @@ export function TaskList(props: TaskListProps) {
           onArchive={props.onArchive}
           onRestore={props.onRestore}
           onDelete={props.onDelete}
+          onSaveMemo={props.onSaveMemo}
+          onUpdateTaskMeta={props.onUpdateTaskMeta}
           onStartTimer={props.onStartTimer}
           onStopTimer={props.onStopTimer}
           onError={props.onError}

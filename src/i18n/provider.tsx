@@ -1,9 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Locale } from './messages';
 import { LocaleContext } from './context';
 import { translate } from './translate';
-
-const STORAGE_KEY = 'locale';
+import { getSetting, setSetting } from '../infra/tauri/store';
 
 // (role: safe locale parser, type: (unknown)=>Locale)
 function parseLocale(value: unknown): Locale {
@@ -11,29 +10,36 @@ function parseLocale(value: unknown): Locale {
   return 'en';
 }
 
-// (role: safe storage read, type: ()=>Locale)
-function loadLocale(): Locale {
-  try {
-    return parseLocale(localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return 'en';
-  }
-}
-
 export function LocaleProvider(props: {
   children: React.ReactNode; // (role: subtree, type: React.ReactNode)
 }) {
-  const [locale, setLocaleState] = useState<Locale>(() => loadLocale());
+  const [locale, setLocaleState] = useState<Locale>('en');
+
+  useEffect(() => {
+    let alive = true;
+
+    void (async () => {
+      const next = parseLocale(await getSetting<Locale>('locale', 'en'));
+      if (alive) {
+        setLocaleState(next);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // (role: set locale and persist, type: (Locale)=>void)
   const setLocale = (next: Locale) => {
     setLocaleState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // ignore storage failure
-    }
   };
+
+  useEffect(() => {
+    void setSetting('locale', locale).catch(() => {
+      // ignore persistence failure
+    });
+  }, [locale]);
 
   const t = useMemo(() => {
     return (key: string, params?: Record<string, string | number>) =>

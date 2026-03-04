@@ -31,8 +31,8 @@ export default function App() {
 
   // (role: schedule view week start (Monday), type: string (YYYY-MM-DD))
   const scheduleWeekStartYmd = useMemo(() => {
-    return toYmd(startOfWeekMonday(new Date()));
-  }, []);
+    return toYmd(startOfWeekMonday(m.today));
+  }, [m.today]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -82,6 +82,8 @@ export default function App() {
                 timeEntries={m.timeEntries}
                 nowIso={m.nowIso}
                 runningTaskIdToday={m.runningTaskIdToday}
+                getMemoText={m.getMemoText}
+                onSaveMemo={m.handleSaveDailyMemo}
                 onToggleToday={(task: Task) =>
                   m.toggleToday({ taskId: task.id, today: m.today })
                 }
@@ -106,6 +108,7 @@ export default function App() {
                 setShowArchived={m.setShowArchived}
                 onReset={m.handleResetManage}
                 onCreate={m.handleCreate}
+                onUpdateTaskMeta={m.handleUpdateTaskMeta}
                 onToggleToday={(task: Task) =>
                   m.toggleToday({ taskId: task.id, today: m.today })
                 }
@@ -125,14 +128,16 @@ export default function App() {
               <SchedulePage
                 tasks={m.tasks}
                 completions={m.completions}
+                getMemoText={m.getMemoText}
                 weekStartYmd={scheduleWeekStartYmd}
+                onOpenTask={() => m.setTab('manage')}
               />
             )}
 
             {m.tab === 'settings' && <SettingsPage />}
           </main>
 
-          <footer className="mt-8 text-xs text-zinc-500">
+          <footer className="mt-10 border-t border-zinc-800 pt-4 text-xs leading-relaxed text-zinc-500">
             {t('note.nextPlan')}
           </footer>
         </div>

@@ -5,6 +5,9 @@ export const ko = {
     schedule: '일정',
     settings: '설정',
     add: '추가',
+    save: '저장',
+    edit: '편집',
+    memo: '메모',
     reset: '초기화',
     all: '전체',
     weekday: '평일',
@@ -22,6 +25,14 @@ export const ko = {
     createTaskHelp: '반복 규칙과 시간을 설정해 작업을 추가하세요.',
     title: '제목',
     titlePlaceholder: '예: 운동',
+    description: '설명',
+    descriptionPlaceholder: '작업에 대한 고정 설명을 입력하세요 (선택)',
+    startDate: '시작일',
+    startDateHint: '비워두면 생성일(기본)부터 표시됩니다.',
+    memo: '메모',
+    memoPlaceholder: '오늘의 메모를 입력하세요',
+    autoArchiveAfter: '완료 수 제한',
+    autoArchiveAfterHint: '비워두면 제한이 없습니다.',
     schedule: '일정',
     days: '요일',
     plan: '계획',
@@ -49,6 +60,8 @@ export const ko = {
       titleTooLong: '제목이 너무 깁니다 (최대 80자).',
       durationMin: '시간은 최소 1분 이상이어야 합니다.',
       durationTooLarge: '시간이 너무 큽니다.',
+      startDateBeforeCreatedAt:
+        '시작일은 생성일보다 빠를 수 없습니다.',
       pickOneDay: '최소 하루 이상 선택하세요.',
     },
     archive: '보관',
@@ -107,11 +120,25 @@ export const ko = {
   note: {
     clickToDismiss: '클릭하여 닫기',
     scheduleDescription:
-      '한눈에 보는 주간 일정입니다. 넓은 화면(7열)에서는 블록 높이가 소요 시간에 따라 커집니다(최소 1시간). 완료 항목은 완료된 정확한 날짜에만 강조됩니다.',
+      '이번 주 할 일을 요일별로 한눈에 확인할 수 있어요.\n완료한 항목은 완료한 날짜 칸에 계속 표시됩니다.',
     nextPlan:
-      '다음: 작업 편집(제목/카테고리/요일)과 Tauri의 SQLite 마이그레이션.',
+      '오늘 해야 할 일을 정리하고 완료 여부와 사용 시간을 기록해 보세요. 반복 일정과 일일 메모로 루틴을 관리하고, 목표를 달성한 작업은 자동 아카이브로 목록을 깔끔하게 유지할 수 있습니다.',
     deleteConfirm: '"{title}" 작업을 영구 삭제할까요?\n되돌릴 수 없습니다.',
     taskNotScheduledToday: '이 작업은 오늘 일정에 없습니다.',
+  },
+
+  schedule: {
+    prevWeek: '이전',
+    thisWeek: '이번 주',
+    nextWeek: '다음',
+    weekRange: '{start} ~ {end}',
+  },
+
+  notify: {
+    timerDone: {
+      title: '타이머 완료',
+      body: '"{task}" 작업 타이머가 완료되었습니다.',
+    },
   },
 
   settings: {
@@ -122,6 +149,14 @@ export const ko = {
         en: 'English',
         ko: '한국어',
         ja: '日本語',
+      },
+    },
+    notifications: {
+      timerDone: {
+        title: '타이머 완료 알림',
+        desc: '실행 중인 타이머가 자동으로 끝나면 알림을 보냅니다.',
+        hintDenied:
+          '알림 권한이 거부되었습니다. 시스템 설정에서 알림 권한을 허용한 뒤 다시 시도하세요.',
       },
     },
   },

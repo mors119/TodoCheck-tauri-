@@ -7,19 +7,24 @@ import type { Task } from '../../domain/types';
 import type { Tab } from '../layout/HeaderTabs';
 import type { CreateTaskInput } from '../components/TaskForm';
 import { getNotifier } from '../di/notifierDI';
+import { getDailyMemoText } from '../../domain/memo';
+import { isVisibleInWeek } from '../../domain/scheduleLimit';
 
 export function useAppModel() {
   const {
     tasks,
     completions,
     timeEntries,
+    taskDailyMemos,
     errorMsg,
     clearError,
     createTask,
+    updateTaskMeta,
     archiveTask,
     restoreTask,
     deleteTask,
     toggleToday,
+    setDailyMemo,
     startTimer,
     stopTimer,
   } = useDailyCheckStore();
@@ -68,14 +73,26 @@ export function useAppModel() {
     [tasks, completions, weekStartYmd],
   );
 
-  const todayStats = useMemo(
-    () => calcTodayStats(tasks, completions, todayYmd, todayDow),
-    [tasks, completions, todayYmd, todayDow],
-  );
-
   const todayTasks = useMemo(() => {
     const filtered = tasks.filter(
-      (t) => t.isActive && t.daysOfWeek.includes(todayDow),
+      (t) => {
+        if (!t.isActive) return false;
+
+        const createdAtYmd = t.createdAt.slice(0, 10);
+        const startYmd = t.startYmd?.trim() || null;
+        const effectiveStartYmd =
+          startYmd && startYmd > createdAtYmd ? startYmd : createdAtYmd;
+        if (todayYmd < effectiveStartYmd) return false;
+
+        const doneToday = completions.some(
+          (c) => c.taskId === t.id && c.date === todayYmd,
+        );
+        // When done exists on this day, keep the row visible even if backlog is exhausted.
+        if (doneToday) return true;
+
+        if (!t.daysOfWeek.includes(todayDow)) return false;
+        return isVisibleInWeek(t, todayYmd, weekStartYmd, completions);
+      },
     );
     return [...filtered].sort((a, b) => {
       const aDone = isDoneOn(completions, a.id, todayYmd);
@@ -83,7 +100,12 @@ export function useAppModel() {
       if (aDone === bDone) return 0;
       return aDone ? 1 : -1;
     });
-  }, [tasks, completions, todayDow, todayYmd]);
+  }, [tasks, completions, todayDow, todayYmd, weekStartYmd]);
+
+  const todayStats = useMemo(
+    () => calcTodayStats(todayTasks, completions, todayYmd, todayDow),
+    [todayTasks, completions, todayYmd, todayDow],
+  );
 
   const manageTasks = useMemo(() => {
     const base = showArchived
@@ -98,7 +120,11 @@ export function useAppModel() {
     const q = manageQuery.trim().toLowerCase();
     if (!q) return byCategory;
 
-    return byCategory.filter((t) => t.title.toLowerCase().includes(q));
+    return byCategory.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q),
+    );
   }, [tasks, showArchived, manageCategory, manageQuery]);
 
   const setError = (msg: string) =>
@@ -112,6 +138,35 @@ export function useAppModel() {
       message: `Task created: ${input.title}`,
     });
   };
+
+  const handleUpdateTaskMeta = (input: {
+    taskId: string;
+    title: string;
+    description: string;
+    startYmd: string | null;
+    autoArchiveAfter: number | null;
+  }) => {
+    updateTaskMeta(input);
+    notifier.notify({
+      level: 'success',
+      message: 'Task updated',
+    });
+  };
+
+  const handleSaveDailyMemo = (input: {
+    taskId: string;
+    date: string;
+    text: string;
+  }) => {
+    setDailyMemo(input);
+    notifier.notify({
+      level: 'info',
+      message: 'Memo saved',
+    });
+  };
+
+  const getMemoText = (taskId: string, date: string): string =>
+    getDailyMemoText(taskDailyMemos, taskId, date);
 
   const handleRestore = (taskId: string) => {
     restoreTask(taskId);
@@ -159,6 +214,7 @@ export function useAppModel() {
     tasks,
     completions,
     timeEntries,
+    taskDailyMemos,
     errorMsg,
 
     // time
@@ -190,8 +246,11 @@ export function useAppModel() {
     clearError,
     setError,
     handleCreate,
-    archiveTask,
+    handleUpdateTaskMeta,
     toggleToday,
+    handleSaveDailyMemo,
+    getMemoText,
+    archiveTask,
     handleRestore,
     handleDelete,
     handleResetManage,

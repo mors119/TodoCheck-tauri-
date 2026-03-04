@@ -57,6 +57,9 @@ export function TodayPage(props: {
   nowIso: string; // (role: ui clock iso, type: string)
   runningTaskIdToday: string | null; // (role: single running task id, type: string | null)
 
+  getMemoText: (taskId: string, date: string) => string;
+  onSaveMemo: (input: { taskId: string; date: string; text: string }) => void;
+
   onToggleToday: (task: Task) => void; // (role: toggle completion, type: (Task)=>void)
   onArchive: (taskId: string) => void; // (role: archive task, type: (string)=>void)
   onStartTimer: (task: Task) => void; // (role: start timer, type: (Task)=>void)
@@ -76,6 +79,8 @@ export function TodayPage(props: {
     timeEntries,
     nowIso,
     runningTaskIdToday,
+    getMemoText,
+    onSaveMemo,
     onToggleToday,
     onArchive,
     onStartTimer,
@@ -124,9 +129,7 @@ export function TodayPage(props: {
 
   return (
     <div className="grid gap-3 md:gap-4 xl:grid-cols-[360px_1fr] xl:items-start">
-      {/* LEFT */}
       <aside className="min-w-0 xl:space-y-4 xl:sticky xl:top-6">
-        {/* Today detail */}
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
           <div className="mb-3">
             <div className="flex items-start justify-between gap-3">
@@ -181,7 +184,6 @@ export function TodayPage(props: {
           </div>
         </section>
 
-        {/* Period stats: lg 이상에서만 */}
         <section className="hidden rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 xl:block">
           <PeriodStatsPanel
             tasks={tasks}
@@ -191,9 +193,7 @@ export function TodayPage(props: {
         </section>
       </aside>
 
-      {/* RIGHT */}
       <main className="min-w-0 space-y-4">
-        {/* Time */}
         <section className="hidden rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 md:block">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -223,7 +223,6 @@ export function TodayPage(props: {
           </div>
         </section>
 
-        {/* Tasks */}
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
           <div className="mb-3">
             <h2 className="text-base font-semibold text-zinc-100">
@@ -243,6 +242,8 @@ export function TodayPage(props: {
             todayDow={todayDow}
             nowIso={nowIso}
             runningTaskIdToday={runningTaskIdToday}
+            getMemoText={getMemoText}
+            onSaveMemo={onSaveMemo}
             onToggleToday={onToggleToday}
             onArchive={onArchive}
             onStartTimer={onStartTimer}

@@ -1,9 +1,13 @@
-import type { DayOfWeek, Task } from './types';
+import type { Completion, DayOfWeek, Task } from './types';
+import { buildWeekDates, dayOfWeek, startOfWeekMonday, toYmd } from './date';
+import { isVisibleInWeek } from './scheduleLimit';
 
 // (role: day schedule item, type: interface)
 export interface DayScheduleItem {
   taskId: string; // (role: task id, type: string)
   title: string; // (role: task title, type: string)
+  description?: string; // (role: task description, type: string | undefined)
+  memoText?: string; // (role: daily memo text, type: string | undefined)
   durationMinutes: number; // (role: planned minutes, type: number)
   category: Task['category']; // (role: category, type: Task['category'])
   isActive: boolean; // (role: active flag, type: boolean)
@@ -37,11 +41,19 @@ export const WEEK_LABEL_KO: Record<DayOfWeek, string> = {
 // (role: build week schedule view model, type: (Task[], boolean)=>WeekSchedule)
 export function buildWeekSchedule(
   tasks: Task[],
+  completions: Completion[],
+  weekStartYmd: string,
   options?: {
     includeArchived?: boolean; // (role: include inactive tasks, type: boolean | undefined)
+    getMemoText?: (taskId: string, dateYmd: string) => string | undefined;
   },
 ): WeekSchedule {
   const includeArchived = options?.includeArchived ?? false;
+  const getMemoText = options?.getMemoText;
+  const normalizedWeekStartYmd = toYmd(
+    startOfWeekMonday(new Date(`${weekStartYmd}T00:00:00`)),
+  );
+  const weekDates = buildWeekDates(normalizedWeekStartYmd);
 
   // 초기화
   const base: WeekSchedule = {
@@ -57,10 +69,25 @@ export function buildWeekSchedule(
   const filtered = includeArchived ? tasks : tasks.filter((t) => t.isActive);
 
   for (const t of filtered) {
-    for (const dow of t.daysOfWeek) {
+    for (const ymd of weekDates) {
+      if (!isVisibleInWeek(t, ymd, normalizedWeekStartYmd, completions))
+        continue;
+
+      // 완료 여부 먼저 계산 (완료면 무조건 표시해야 하므로)
+      const doneThatDay = (completions ?? []).some(
+        (c) => c.taskId === t.id && c.date === ymd,
+      );
+
+      const dow = dayOfWeek(new Date(`${ymd}T00:00:00`));
+
+      // 완료가 아니면, 기존 룰대로 "그 요일에 스케줄된 task만"
+      if (!doneThatDay && !t.daysOfWeek.includes(dow)) continue;
+
       base[dow].push({
         taskId: t.id,
         title: t.title,
+        description: t.description,
+        memoText: getMemoText?.(t.id, ymd) ?? undefined,
         durationMinutes: t.durationMinutes,
         category: t.category,
         isActive: t.isActive,

@@ -1,60 +1,93 @@
 import {
   CompletionsSchema,
+  TaskDailyMemosSchema,
   TasksSchema,
   TimeEntriesSchema,
 } from '../domain/schemas';
-import type { Completion, Task, TimeEntry } from '../domain/types';
+import type { Completion, Task, TaskDailyMemo, TimeEntry } from '../domain/types';
 
 const STORAGE_KEYS = {
   tasks: 'dailycheck.tasks.v2',
   completions: 'dailycheck.completions.v1',
   timeEntries: 'dailycheck.timeEntries.v1',
+  taskDailyMemos: 'dailycheck.taskDailyMemos.v1',
 } as const;
 
-export function loadTasks(): Task[] {
-  const raw = localStorage.getItem(STORAGE_KEYS.tasks);
-  if (!raw) return [];
+function safeRead<T>(key: string, parse: (value: unknown) => T, fallback: T): T {
   try {
-    const parsed: unknown = JSON.parse(raw);
-    const result = TasksSchema.safeParse(parsed);
-    return result.success ? (result.data as unknown as Task[]) : [];
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const decoded: unknown = JSON.parse(raw);
+    return parse(decoded);
   } catch {
-    return [];
+    return fallback;
   }
+}
+
+function safeWrite(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore storage write failure
+  }
+}
+
+export function loadTasks(): Task[] {
+  return safeRead(
+    STORAGE_KEYS.tasks,
+    (decoded) => {
+      const result = TasksSchema.safeParse(decoded);
+      return result.success ? (result.data as Task[]) : [];
+    },
+    [],
+  );
 }
 
 export function saveTasks(tasks: Task[]): void {
-  localStorage.setItem(STORAGE_KEYS.tasks, JSON.stringify(tasks));
+  safeWrite(STORAGE_KEYS.tasks, tasks);
 }
 
 export function loadCompletions(): Completion[] {
-  const raw = localStorage.getItem(STORAGE_KEYS.completions);
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    const result = CompletionsSchema.safeParse(parsed);
-    return result.success ? (result.data as unknown as Completion[]) : [];
-  } catch {
-    return [];
-  }
+  return safeRead(
+    STORAGE_KEYS.completions,
+    (decoded) => {
+      const result = CompletionsSchema.safeParse(decoded);
+      return result.success ? (result.data as Completion[]) : [];
+    },
+    [],
+  );
 }
 
 export function saveCompletions(items: Completion[]): void {
-  localStorage.setItem(STORAGE_KEYS.completions, JSON.stringify(items));
+  safeWrite(STORAGE_KEYS.completions, items);
 }
 
 export function loadTimeEntries(): TimeEntry[] {
-  const raw = localStorage.getItem(STORAGE_KEYS.timeEntries);
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    const result = TimeEntriesSchema.safeParse(parsed);
-    return result.success ? (result.data as unknown as TimeEntry[]) : [];
-  } catch {
-    return [];
-  }
+  return safeRead(
+    STORAGE_KEYS.timeEntries,
+    (decoded) => {
+      const result = TimeEntriesSchema.safeParse(decoded);
+      return result.success ? (result.data as TimeEntry[]) : [];
+    },
+    [],
+  );
 }
 
 export function saveTimeEntries(items: TimeEntry[]): void {
-  localStorage.setItem(STORAGE_KEYS.timeEntries, JSON.stringify(items));
+  safeWrite(STORAGE_KEYS.timeEntries, items);
+}
+
+export function loadTaskDailyMemos(): TaskDailyMemo[] {
+  return safeRead(
+    STORAGE_KEYS.taskDailyMemos,
+    (decoded) => {
+      const result = TaskDailyMemosSchema.safeParse(decoded);
+      return result.success ? (result.data as TaskDailyMemo[]) : [];
+    },
+    [],
+  );
+}
+
+export function saveTaskDailyMemos(memos: TaskDailyMemo[]): void {
+  safeWrite(STORAGE_KEYS.taskDailyMemos, memos);
 }

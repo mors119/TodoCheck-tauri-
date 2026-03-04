@@ -5,6 +5,9 @@ export const ja = {
     schedule: 'スケジュール',
     settings: '設定',
     add: '追加',
+    save: '保存',
+    edit: '編集',
+    memo: 'メモ',
     reset: 'リセット',
     all: 'すべて',
     weekday: '平日',
@@ -22,6 +25,15 @@ export const ja = {
     createTaskHelp: '繰り返しルールと時間を設定してタスクを追加します。',
     title: 'タイトル',
     titlePlaceholder: '例: 運動',
+    description: '説明',
+    descriptionPlaceholder: 'このタスクの固定説明を入力してください (任意)',
+    startDate: '開始日',
+    startDateHint: '空欄ならすぐに予定対象になります。',
+    memo: 'メモ',
+    memoPlaceholder: 'このタスクの今日のメモを入力してください',
+    autoArchiveAfter: '完了数の上限',
+    autoArchiveAfterHint:
+      '空欄なら上限なしです。',
     schedule: '予定',
     days: '曜日',
     plan: '計画',
@@ -48,6 +60,8 @@ export const ja = {
       titleTooLong: 'タイトルが長すぎます (最大80文字)。',
       durationMin: '時間は1分以上である必要があります。',
       durationTooLarge: '時間が大きすぎます。',
+      startDateBeforeCreatedAt:
+        '開始日は作成日より前にできません。',
       pickOneDay: '少なくとも1日選択してください。',
     },
     archive: 'アーカイブ',
@@ -107,12 +121,26 @@ export const ja = {
   note: {
     clickToDismiss: 'クリックで閉じる',
     scheduleDescription:
-      '週全体を一覧できる表示です。広い画面(7列)では、ブロックの高さが所要時間に応じて変化します(最小1時間)。完了項目は完了した当日のみ強調表示されます。',
+      '今週のタスクを曜日ごとにひと目で確認できます。\n完了した項目は完了した日付の列に表示され続けます。',
     nextPlan:
-      '次: タスク編集(タイトル/カテゴリ/曜日)と Tauri の SQLite マイグレーション。',
+      '今日やることを整理し、完了状況と使った時間を記録しましょう。繰り返し予定と日別メモで習慣を整え、目標回数に達したタスクは自動アーカイブで整理できるため、アクティブ一覧をすっきり保てます。',
     deleteConfirm:
       '"{title}" を完全に削除しますか?\nこの操作は元に戻せません。',
     taskNotScheduledToday: 'このタスクは今日の予定ではありません。',
+  },
+
+  schedule: {
+    prevWeek: '前へ',
+    thisWeek: '今週',
+    nextWeek: '次へ',
+    weekRange: '{start} ~ {end}',
+  },
+
+  notify: {
+    timerDone: {
+      title: 'タイマー完了',
+      body: '"{task}" のタイマーが完了しました。',
+    },
   },
 
   settings: {
@@ -123,6 +151,14 @@ export const ja = {
         en: 'English',
         ko: '한국어',
         ja: '日本語',
+      },
+    },
+    notifications: {
+      timerDone: {
+        title: 'タイマー完了通知',
+        desc: '実行中のタイマーが自動で終了したら通知します。',
+        hintDenied:
+          '通知権限が拒否されました。システム設定で通知を許可してから再試行してください。',
       },
     },
   },

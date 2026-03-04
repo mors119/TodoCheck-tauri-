@@ -32,6 +32,13 @@ export function ManagePage(props: {
   onReset: () => void; // (role: reset manage controls, type: ()=>void)
 
   onCreate: Parameters<typeof TaskForm>[0]['onCreate'];
+  onUpdateTaskMeta: (input: {
+    taskId: string;
+    title: string;
+    description: string;
+    startYmd: string | null;
+    autoArchiveAfter: number | null;
+  }) => void;
   onToggleToday: (task: Task) => void; // (role: toggle completion, type: (Task)=>void)
   onArchive: (taskId: string) => void; // (role: archive task, type: (string)=>void)
   onRestore: (taskId: string) => void; // (role: restore task, type: (string)=>void)
@@ -58,6 +65,7 @@ export function ManagePage(props: {
     setShowArchived,
     onReset,
     onCreate,
+    onUpdateTaskMeta,
     onToggleToday,
     onArchive,
     onRestore,
@@ -69,7 +77,6 @@ export function ManagePage(props: {
 
   return (
     <div className="grid gap-5 xl:grid-cols-[640px_1fr] xl:items-start">
-      {/* LEFT: create + filters */}
       <aside className="space-y-5 xl:sticky xl:top-6">
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
           <TaskForm onCreate={onCreate} />
@@ -169,7 +176,6 @@ export function ManagePage(props: {
         </section>
       </aside>
 
-      {/* RIGHT: list */}
       <main className="min-w-0">
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
           <div className="mb-3">
@@ -190,6 +196,7 @@ export function ManagePage(props: {
             todayDow={todayDow}
             nowIso={nowIso}
             runningTaskIdToday={runningTaskIdToday}
+            onUpdateTaskMeta={onUpdateTaskMeta}
             onToggleToday={onToggleToday}
             onArchive={onArchive}
             onRestore={onRestore}

@@ -5,6 +5,9 @@ export const en = {
     schedule: 'Schedule',
     settings: 'Settings',
     add: 'Add',
+    save: 'Save',
+    edit: 'Edit',
+    memo: 'Memo',
     reset: 'Reset',
     all: 'All',
     weekday: 'Weekday',
@@ -22,6 +25,14 @@ export const en = {
     createTaskHelp: 'Choose a schedule rule, duration, and add a task.',
     title: 'Title',
     titlePlaceholder: 'e.g. Exercise',
+    description: 'Description',
+    descriptionPlaceholder: 'Optional long-lived note about this task',
+    startDate: 'Start date',
+    startDateHint: 'Leave blank to make it available immediately.',
+    memo: 'Memo',
+    memoPlaceholder: 'Write today-specific notes for this task',
+    autoArchiveAfter: 'Completion limit',
+    autoArchiveAfterHint: 'Leave blank for no limit.',
     schedule: 'Schedule',
     days: 'Days',
     plan: 'Plan',
@@ -49,6 +60,8 @@ export const en = {
       titleTooLong: 'Title is too long (max 80).',
       durationMin: 'Duration must be >= 1 minute.',
       durationTooLarge: 'Duration too large.',
+      startDateBeforeCreatedAt:
+        'Start date cannot be earlier than created date.',
       pickOneDay: 'Pick at least one day.',
     },
     archive: 'Archive',
@@ -108,11 +121,25 @@ export const en = {
   note: {
     clickToDismiss: 'Click to dismiss',
     scheduleDescription:
-      'A week-at-a-glance view. On wide screens (7 columns), block height scales by duration (minimum 1 hour). Completed items are highlighted only on the exact day they were completed.',
+      'See this week\'s tasks at a glance by weekday.\nCompleted items stay visible on the exact date they were finished.',
     nextPlan:
-      'Next: edit task (title/category/days), and SQLite migration on Tauri.',
+      'Organize what matters today, track completion and time spent, and keep steady routines with repeat schedules and daily memos. Tasks that hit your goal can be auto-archived so your active list stays focused and clean.',
     deleteConfirm: 'Delete "{title}" permanently?\nThis cannot be undone.',
     taskNotScheduledToday: 'This task is not scheduled for today.',
+  },
+
+  schedule: {
+    prevWeek: 'Prev',
+    thisWeek: 'This Week',
+    nextWeek: 'Next',
+    weekRange: '{start} ~ {end}',
+  },
+
+  notify: {
+    timerDone: {
+      title: 'Timer completed',
+      body: '"{task}" is finished.',
+    },
   },
 
   settings: {
@@ -123,6 +150,14 @@ export const en = {
         en: 'English',
         ko: 'Korean',
         ja: 'Japanese',
+      },
+    },
+    notifications: {
+      timerDone: {
+        title: 'Timer done notification',
+        desc: 'Notify when a running timer completes automatically.',
+        hintDenied:
+          'Notification permission was denied. Enable notifications in system settings and try again.',
       },
     },
   },

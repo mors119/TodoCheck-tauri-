@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { Category, DayOfWeek } from '../../domain/types';
 import { ALL_DAYS } from '../../domain/schedule';
 import { LocaleContext } from '../../i18n/context';
+import { toYmd } from '../../domain/date';
 
 // (role: zod enum sources, type: readonly arrays)
 const CATEGORY_VALUES = [
@@ -18,14 +19,29 @@ const DAY_VALUES = ALL_DAYS as readonly DayOfWeek[];
 
 // (role: preprocess numeric inputs safely, type: (unknown)=>unknown)
 const toNumber = (v: unknown) => {
-  // input[type=number]라도 RHF는 string을 줄 수 있음
   if (typeof v === 'number') return v;
   if (typeof v === 'string') return v.trim() === '' ? NaN : Number(v);
   return NaN;
 };
 
+const toNullableThreshold = (v: unknown) => {
+  if (v == null) return null;
+  if (typeof v === 'string') return v.trim() === '' ? null : Number(v);
+  if (typeof v === 'number') return v;
+  return null;
+};
+
+const toNullableYmd = (v: unknown) => {
+  if (v == null) return null;
+  if (typeof v !== 'string') return null;
+  const ymd = v.trim();
+  if (ymd === '') return null;
+  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? ymd : null;
+};
+
 function createTaskInputSchema(
   t: (key: string, params?: Record<string, string | number>) => string,
+  createdAtYmd: string,
 ) {
   return z
     .object({
@@ -35,9 +51,10 @@ function createTaskInputSchema(
         .min(1, t('task.validation.titleRequired'))
         .max(80, t('task.validation.titleTooLong')),
 
+      description: z.string().max(2000).default(''),
+
       category: z.enum(CATEGORY_VALUES),
 
-      // 여기서 output이 "number"로 확정됨
       durationMinutes: z.preprocess(
         toNumber,
         z
@@ -47,9 +64,27 @@ function createTaskInputSchema(
           .max(600, t('task.validation.durationTooLarge')),
       ),
 
+      startYmd: z.preprocess(
+        toNullableYmd,
+        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+      ),
+
+      autoArchiveAfter: z.preprocess(
+        toNullableThreshold,
+        z.number().int().min(1).nullable(),
+      ),
+
       customDays: z.array(z.enum(DAY_VALUES)).optional(),
     })
     .superRefine((val, ctx) => {
+      if (val.startYmd && val.startYmd < createdAtYmd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['startYmd'],
+          message: t('task.validation.startDateBeforeCreatedAt'),
+        });
+      }
+
       if (val.category === 'custom') {
         const days = val.customDays ?? [];
         if (days.length === 0) {
@@ -74,7 +109,11 @@ export interface TaskFormProps {
 
 export function TaskForm({ onCreate }: TaskFormProps) {
   const { t } = useContext(LocaleContext);
-  const schema = useMemo(() => createTaskInputSchema(t), [t]);
+  const createdAtYmd = useMemo(() => toYmd(new Date()), []);
+  const schema = useMemo(
+    () => createTaskInputSchema(t, createdAtYmd),
+    [t, createdAtYmd],
+  );
 
   const {
     register,
@@ -87,8 +126,11 @@ export function TaskForm({ onCreate }: TaskFormProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       title: '',
+      description: '',
       category: 'custom',
       durationMinutes: 30,
+      startYmd: null,
+      autoArchiveAfter: null,
       customDays: [],
     },
     mode: 'onChange',
@@ -119,8 +161,11 @@ export function TaskForm({ onCreate }: TaskFormProps) {
 
     reset({
       title: '',
+      description: '',
       category: 'weekday',
       durationMinutes: 30,
+      startYmd: null,
+      autoArchiveAfter: null,
       customDays: ['Mon'],
     });
   });
@@ -136,8 +181,8 @@ export function TaskForm({ onCreate }: TaskFormProps) {
         </p>
       </div>
 
-      <form onSubmit={submit}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <form onSubmit={submit} className="space-y-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start">
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-zinc-400">
               {t('task.title')}
@@ -154,7 +199,7 @@ export function TaskForm({ onCreate }: TaskFormProps) {
             )}
           </div>
 
-          <div className="w-32">
+          <div className="w-full md:w-32">
             <label className="mb-1 block text-xs font-medium text-zinc-400">
               {t('time.durationMin')}
             </label>
@@ -162,7 +207,6 @@ export function TaskForm({ onCreate }: TaskFormProps) {
               type="number"
               min={1}
               max={600}
-              // RHF 변환 옵션 제거: Zod에서만 변환/검증
               {...register('durationMinutes')}
               className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-400"
             />
@@ -186,8 +230,58 @@ export function TaskForm({ onCreate }: TaskFormProps) {
               <option value="custom">{t('task.addScheduleCustom')}</option>
             </select>
           </div>
+        </div>
 
-          <div className="md:pt-6">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-400">
+            {t('task.description')}
+          </label>
+          <textarea
+            {...register('description')}
+            rows={4}
+            placeholder={t('task.descriptionPlaceholder')}
+            className="min-h-24 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-400"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <label className="mb-1 block text-xs font-medium text-zinc-400">
+                {t('task.startDate')}
+              </label>
+              <input
+                type="date"
+                {...register('startYmd')}
+                className="w-44 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-400"
+              />
+              <p className="text-xs text-zinc-500">{t('task.startDateHint')}</p>
+              {errors.startYmd && (
+                <div className="text-xs text-amber-200">
+                  {errors.startYmd.message}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="mb-1 block text-xs font-medium text-zinc-400">
+                {t('task.autoArchiveAfter')}
+              </label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                {...register('autoArchiveAfter')}
+                placeholder="2"
+                className="w-32 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-400"
+              />
+              <p className="text-xs text-zinc-500">
+                {t('task.autoArchiveAfterHint')}
+              </p>
+            </div>
+          </div>
+
+          <div>
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
@@ -205,7 +299,7 @@ export function TaskForm({ onCreate }: TaskFormProps) {
         </div>
 
         {category === 'custom' && (
-          <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
             <div className="mb-2 text-xs font-medium text-zinc-400">
               {t('task.pickDays')}
             </div>
